@@ -1,0 +1,25 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+
+    <div class="container page-width py-3">
+        <div class="row">
+            <div class="col">
+                <h2 class="mb-3">Categories</h2>
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{% url 'category' 0 %}">No category</a>
+                        <span class="badge badge-primary badge-pill">{{ number_of_listing_without_category }}</span>
+                    </li>
+                    {% for category in categories %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'category' category.id %}">{{ category.name }}</a>
+                            <span class="badge badge-primary badge-pill">{{ category.number_of_listings }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

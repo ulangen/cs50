@@ -1,0 +1,17 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+
+    <div class="container page-width py-3">
+        <div class="row">
+            <div class="col">
+                <div class="alert alert-danger">
+                    <h5>Error: {{ title }}</h5>
+                    <p class="mb-0">{{ message }}</p>
+                </div>
+                <a class="btn btn-primary btn-block" href="{% url 'listing' listing.id %}">Return back</a>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
