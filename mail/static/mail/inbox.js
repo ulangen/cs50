@@ -18,6 +18,7 @@ function compose_email() {
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
+  document.querySelector('#email-view').style.display = 'none';
 
   // Clear out composition fields
   document.querySelector('#compose-recipients').value = '';
@@ -30,6 +31,7 @@ function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
   document.querySelector('#compose-view').style.display = 'none';
+  document.querySelector('#email-view').style.display = 'none';
 
   // Show the mailbox name
   document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
@@ -40,16 +42,15 @@ function load_mailbox(mailbox) {
   .then(emails => {
     const viewElement = document.querySelector('#emails-view');
 
-    emails.forEach((mail) => {
-      const backgroundColor = mail.read ? 'bg-light' : 'bg-white';
+    emails.forEach((email) => {
+      const backgroundColor = email.read ? 'bg-light' : 'bg-white';
 
+      // Email item component template
       viewElement.innerHTML += `
-        <div class="border rounded d-flex p-3 mb-2 ${backgroundColor}">
-          <div class="mr-2">
-            <strong>${mail.sender}</strong>
-          </div>
-          <div class="mr-2">${mail.subject}</div>
-          <div class="ml-auto text-muted">${mail.timestamp}</div>
+        <div class="email-item border rounded d-flex p-3 mb-2 ${backgroundColor}" onclick="load_mail(${email.id})">
+          <div class="mr-2"><strong>${email.sender}</strong></div>
+          <div class="mr-2">${email.subject}</div>
+          <div class="ml-auto text-muted">${email.timestamp}</div>
         </div>
       `;  
     });
@@ -74,6 +75,51 @@ function send_mail(event) {
       alert(result.error);
     } else {
       load_mailbox('sent');
+    }
+  });
+}
+
+function load_mail(email_id) {
+
+  // Show email view and hide other views
+  document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#compose-view').style.display = 'none';
+  document.querySelector('#email-view').style.display = 'block';
+
+  // Show the mailbox email
+  fetch(`/emails/${email_id}`)
+  .then(response => response.json())
+  .then(email => {
+    const viewElement = document.querySelector('#email-view');
+
+    if (email.error) {
+      // Email error component template
+      viewElement.innerHTML = `
+        <div class="alert alert-danger">${email.error}</div>
+      `;
+    } else {
+
+      // Mark email as read
+      if (!email.read) {
+        fetch(`/emails/${email.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+              read: true
+          })
+        });
+      }
+
+      // Email component template
+      viewElement.innerHTML = `
+        <ul class="list-unstyled">
+          <li><strong>From: </strong>${email.sender}</li>
+          <li><strong>To: </strong>${email.recipients}</li>
+          <li><strong>Subject: </strong>${email.subject}</li>
+          <li><strong>Timestamp: </strong>${email.timestamp}</li>
+        </ul>
+        <hr>
+        ${email.body}
+      `;  
     }
   });
 }
