@@ -129,6 +129,7 @@ function load_mail(email_id) {
           <li><strong>Subject: </strong>${email.subject}</li>
           <li><strong>Timestamp: </strong>${email.timestamp}</li>
         </ul>
+        <button class="btn btn-outline-primary" onclick="reply_mail(${email.id})">Reply</button>
         <hr>
         ${email.body}
       `;  
@@ -157,5 +158,23 @@ function unarchive_mail(email_id) {
   })
   .then(() => {
     load_mailbox('archive');
+  });
+}
+
+function reply_mail(email_id) {
+  compose_email();
+
+  fetch(`/emails/${email_id}`)
+  .then(response => response.json())
+  .then(email => {
+    document.querySelector('#compose-recipients').value = email.sender;
+
+    if (email.subject.slice(0, 4) === 'Re: ') {
+      document.querySelector('#compose-subject').value = email.subject;
+    } else {
+      document.querySelector('#compose-subject').value = `Re: ${email.subject}`;
+    }
+
+    document.querySelector('#compose-body').value = `On ${email.timestamp} ${email.sender} wrote: ${email.body}`;
   });
 }
