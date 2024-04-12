@@ -47,7 +47,19 @@ function load_mailbox(mailbox) {
 
       // Email item component template
       viewElement.innerHTML += `
-        <div class="email-item border rounded d-flex p-3 mb-2 ${backgroundColor}" onclick="load_mail(${email.id})">
+        <div class="border rounded d-flex align-items-center p-3 mb-2 ${backgroundColor}">
+          <button class="btn btn-outline-primary btn-sm mr-2" onclick="load_mail(${email.id})">Open</button>
+          ${
+            (function() {
+              if (mailbox === 'inbox') {
+                return `<button class="btn btn-outline-primary btn-sm mr-2" onclick="archive_mail(${email.id})">Archive</button>`;
+              } else if (mailbox === 'archive') {
+                return `<button class="btn btn-outline-primary btn-sm mr-2" onclick="unarchive_mail(${email.id})">Unarchive</button>`;
+              } else {
+                return '';
+              }
+            })()
+          }
           <div class="mr-2"><strong>${email.sender}</strong></div>
           <div class="mr-2">${email.subject}</div>
           <div class="ml-auto text-muted">${email.timestamp}</div>
@@ -121,5 +133,29 @@ function load_mail(email_id) {
         ${email.body}
       `;  
     }
+  });
+}
+
+function archive_mail(email_id) {
+  fetch(`/emails/${email_id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+        archived: true
+    })
+  })
+  .then(() => {
+    load_mailbox('inbox');
+  });
+}
+
+function unarchive_mail(email_id) {
+  fetch(`/emails/${email_id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+        archived: false
+    })
+  })
+  .then(() => {
+    load_mailbox('archive');
   });
 }
