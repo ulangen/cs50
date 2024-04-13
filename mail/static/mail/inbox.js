@@ -47,7 +47,7 @@ function load_mailbox(mailbox) {
 
       // Email item component template
       viewElement.innerHTML += `
-        <div class="border rounded d-flex align-items-center p-3 mb-2 ${backgroundColor}">
+        <div class="border rounded d-flex align-items-center p-3 mb-2 ${backgroundColor} ${email.read ? 'text-muted' : ''}">
           <button class="btn btn-outline-primary btn-sm mr-2" onclick="load_mail(${email.id}, '${mailbox}')">Open</button>
           ${
             (function() {
@@ -61,7 +61,7 @@ function load_mailbox(mailbox) {
             })()
           }
           <div class="mr-2"><strong>${email.sender}</strong></div>
-          <div class="mr-2">${email.subject}</div>
+          <div class="mr-2 text-truncate">${email.subject}</div>
           <div class="ml-auto text-muted">${email.timestamp}</div>
         </div>
       `;  
