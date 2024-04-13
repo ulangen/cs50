@@ -48,13 +48,13 @@ function load_mailbox(mailbox) {
       // Email item component template
       viewElement.innerHTML += `
         <div class="border rounded d-flex align-items-center p-3 mb-2 ${backgroundColor}">
-          <button class="btn btn-outline-primary btn-sm mr-2" onclick="load_mail(${email.id})">Open</button>
+          <button class="btn btn-outline-primary btn-sm mr-2" onclick="load_mail(${email.id}, '${mailbox}')">Open</button>
           ${
             (function() {
               if (mailbox === 'inbox') {
-                return `<button class="btn btn-outline-primary btn-sm mr-2" onclick="archive_mail(${email.id})">Archive</button>`;
+                return `<button class="btn btn-outline-secondary btn-sm mr-2" onclick="archive_mail(${email.id})">Archive</button>`;
               } else if (mailbox === 'archive') {
-                return `<button class="btn btn-outline-primary btn-sm mr-2" onclick="unarchive_mail(${email.id})">Unarchive</button>`;
+                return `<button class="btn btn-outline-secondary btn-sm mr-2" onclick="unarchive_mail(${email.id}, 'mailbox')">Unarchive</button>`;
               } else {
                 return '';
               }
@@ -91,7 +91,7 @@ function send_mail(event) {
   });
 }
 
-function load_mail(email_id) {
+function load_mail(email_id, mailbox) {
 
   // Show email view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
@@ -130,6 +130,19 @@ function load_mail(email_id) {
           <li><strong>Timestamp: </strong>${email.timestamp}</li>
         </ul>
         <button class="btn btn-outline-primary" onclick="reply_mail(${email.id})">Reply</button>
+        ${
+          (function() {
+            if (mailbox === 'inbox' || mailbox === 'archive') {
+              if (email.archived) {
+                return `<button class="btn btn-outline-secondary" onclick="unarchive_mail(${email.id}, 'email')">Unarchive</button>`;
+              } else {
+                return `<button class="btn btn-outline-secondary" onclick="archive_mail(${email.id})">Archive</button>`;
+              }
+            } else {
+              return '';
+            }
+          })()
+        }
         <hr>
         ${email.body}
       `;  
@@ -149,7 +162,7 @@ function archive_mail(email_id) {
   });
 }
 
-function unarchive_mail(email_id) {
+function unarchive_mail(email_id, page) {
   fetch(`/emails/${email_id}`, {
     method: 'PUT',
     body: JSON.stringify({
@@ -157,7 +170,11 @@ function unarchive_mail(email_id) {
     })
   })
   .then(() => {
-    load_mailbox('archive');
+    if (page === 'mailbox') {
+      load_mailbox('archive')
+    } else {
+      load_mailbox('inbox');
+    }
   });
 }
 
