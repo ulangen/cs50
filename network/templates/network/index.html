@@ -1,5 +1,14 @@
 {% extends "network/layout.html" %}
 
+{% load static %}
+
 {% block body %}
-    TODO
+    <div id="app" data-is-user-authenticated="{{ user.is_authenticated }}"></div>
+{% endblock %}
+
+{% block script %}
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="{% static 'network/index.js' %}" type="text/babel"></script>
 {% endblock %}
