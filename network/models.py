@@ -3,7 +3,15 @@ from django.db import models
 
 
 class User(AbstractUser):
-    pass
+    authors = models.ManyToManyField("User", related_name="readers")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "authors": self.authors.count(),
+            "readers": self.readers.count()
+        }
 
 
 class Post(models.Model):
@@ -14,6 +22,7 @@ class Post(models.Model):
     def serialize(self):
         return {
             "id": self.id,
+            "author_id": self.author.id,
             "author": self.author.username,
             "body": self.body,
             "timestamp": self.timestamp.strftime("%b %d %Y, %I:%M %p"),

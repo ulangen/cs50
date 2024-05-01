@@ -9,7 +9,16 @@ from .models import User, Post
 
 
 def index(request):
-    return render(request, "network/index.html")
+    return render(request, "network/index.html", {
+        "page_name": "all_posts"
+    })
+
+
+def user_profile(request, user_id):
+    return render(request, "network/index.html", {
+        "page_name": "user_profile",
+        "page_user_id": user_id
+    })
 
 
 def posts(request):
@@ -42,6 +51,94 @@ def posts(request):
     else:
         return JsonResponse({
             "error": "GET or POST request required."
+        }, status=400)
+
+
+def users(request, user_id):
+
+    if request.method == "GET":
+
+        # Query for requested user
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                "error": f"User with id {user_id} does not exist."
+            }, status=400)
+        
+        author = user.serialize()
+
+        if request.user.is_authenticated:
+
+            if user.readers.filter(pk=request.user.id).exists():
+                author["is_followed"] = True
+            else:
+                author["is_followed"] = False
+
+            if user == request.user:
+                author["is_author_is_user"] = True
+            else:
+                author["is_author_is_user"] = False
+
+        return JsonResponse(author)
+    
+
+    elif request.method == "POST":
+
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authorization required."}, status=401)
+
+        # Query for requested user
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                "error": f"User with id {user_id} does not exist."
+            }, status=400)
+        
+        if user == request.user:
+            return JsonResponse({
+                "error": "User cannot follow himself."
+            }, status=400)
+        
+        data = json.loads(request.body)
+        if data.get("followed") is not None:
+            if data["followed"]:
+                user.readers.add(request.user)
+            else:
+                user.readers.remove(request.user)
+
+        return HttpResponse(status=204)
+        
+    # User must be via GET or POST
+    else:
+        return JsonResponse({
+            "error": "GET or POST request required."
+        }, status=400)
+    
+
+def posts_of_user(request, user_id):
+
+    # Return user's posts
+    if request.method == "GET":
+
+        # Query for requested user
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                "error": f"User with id {user_id} does not exist."
+            }, status=400)
+        
+        posts = Post.objects.filter(author=user)
+        posts = posts.order_by("-timestamp").all()
+
+        return JsonResponse([post.serialize() for post in posts], safe=False)
+
+    # User's posts must be via GET
+    else:
+        return JsonResponse({
+            "error": "GET request required."
         }, status=400)
 
 

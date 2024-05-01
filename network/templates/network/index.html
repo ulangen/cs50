@@ -3,7 +3,22 @@
 {% load static %}
 
 {% block body %}
-    <div id="app" data-is-user-authenticated="{{ user.is_authenticated }}"></div>
+
+    {% if page_name == "all_posts" %}
+        <div
+            id="app"
+            data-is-user-authenticated="{{ user.is_authenticated }}"
+            data-page-name="{{ page_name }}"
+        ></div>
+    {% elif page_name == "user_profile" %}
+        <div
+            id="app"
+            data-is-user-authenticated="{{ user.is_authenticated }}"
+            data-page-name="{{ page_name }}"
+            data-page-user-id="{{ page_user_id }}"
+        ></div>
+    {% endif %}
+    
 {% endblock %}
 
 {% block script %}
