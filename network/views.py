@@ -21,6 +21,12 @@ def user_profile(request, user_id):
     })
 
 
+def subscriptions(request):
+    return render(request, "network/index.html", {
+        "page_name": "subscriptions"
+    })
+
+
 def posts(request):
 
     # Return content of posts
@@ -51,6 +57,26 @@ def posts(request):
     else:
         return JsonResponse({
             "error": "GET or POST request required."
+        }, status=400)
+
+
+def subscription_posts(request):
+
+    # Return content of subscriptions
+    if request.method == "GET":
+
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authorization required."}, status=401)
+
+        posts = Post.objects.filter(author__readers=request.user)
+        posts = posts.order_by("-timestamp").all()
+
+        return JsonResponse([post.serialize() for post in posts], safe=False)
+    
+    # Subscriptions must be via GET
+    else:
+        return JsonResponse({
+            "error": "GET request required."
         }, status=400)
 
 

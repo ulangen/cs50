@@ -234,6 +234,12 @@ function UserProfilePage({ config }) {
     );
 }
 
+function SubscriptionPostsPage({ config, onClickAuthor }) {
+    const postListConfig = { ...config.page };
+
+    return <PostList config={postListConfig} onClickAuthor={onClickAuthor} />;
+}
+
 function App({ initConfig }) {
     const [config, setConfig] = React.useState({ ...initConfig });
 
@@ -260,6 +266,14 @@ function App({ initConfig }) {
         case 'user_profile':
             return (
                 <UserProfilePage
+                    config={config}
+                    onClickAuthor={handleClickAuthor}
+                />
+            );
+
+        case 'subscriptions':
+            return (
+                <SubscriptionPostsPage
                     config={config}
                     onClickAuthor={handleClickAuthor}
                 />
@@ -311,6 +325,13 @@ switch (app.dataset.pageName) {
             name: app.dataset.pageName,
             postApiUrl: `/users/${userId}/posts`,
             userId: userId,
+        };
+        break;
+
+    case 'subscriptions':
+        config.page = {
+            name: app.dataset.pageName,
+            postApiUrl: '/posts/subscriptions',
         };
         break;
 

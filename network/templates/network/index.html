@@ -17,6 +17,12 @@
             data-page-name="{{ page_name }}"
             data-page-user-id="{{ page_user_id }}"
         ></div>
+    {% elif page_name == "subscriptions" %}
+        <div
+            id="app"
+            data-is-user-authenticated="{{ user.is_authenticated }}"
+            data-page-name="{{ page_name }}"
+        ></div>
     {% endif %}
     
 {% endblock %}
