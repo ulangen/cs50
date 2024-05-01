@@ -3,7 +3,7 @@ function CSRFToken() {
     return <input type="hidden" name="csrfmiddlewaretoken" value={csrftoken} />;
 }
 
-function PostCreation() {
+function PostCreation({ onCreate }) {
     const textareaRef = React.useRef(null);
 
     function handleSubmit(event) {
@@ -27,6 +27,7 @@ function PostCreation() {
 
                 form.reset();
                 textareaRef.current.focus();
+                onCreate();
             });
     }
 
@@ -59,8 +60,74 @@ function PostCreation() {
     );
 }
 
+function Post({ postData }) {
+    return (
+        <div className="card mb-3">
+            <div className="card-body">
+                <h5 className="card-title">{postData.author}</h5>
+                <p className="card-text">{postData.body}</p>
+                <p className="card-text">
+                    <small className="text-muted">{postData.timestamp}</small>
+                </p>
+                <hr />
+                <ul className="card-text list-inline">
+                    <li className="list-inline-item">
+                        <strong>0</strong>{' '}
+                        <span className="text-muted">Likes</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    );
+}
+
+function PostList({ posts }) {
+    return (
+        <React.Fragment>
+            {posts.length ? (
+                posts.map((postData) => (
+                    <Post key={postData.id} postData={postData} />
+                ))
+            ) : (
+                <div className="card">
+                    <div className="card-body">
+                        <p className="card-text">No posts</p>
+                    </div>
+                </div>
+            )}
+        </React.Fragment>
+    );
+}
+
 function App({ isUserAuthenticated }) {
-    return isUserAuthenticated ? <PostCreation /> : null;
+    const [posts, setPosts] = React.useState([]);
+
+    React.useEffect(() => {
+        updatePosts();
+    }, []);
+
+    function updatePosts() {
+        fetch('/posts')
+            .then((response) => response.json())
+            .then((posts) => {
+                // Print posts
+                console.log(posts);
+                setPosts(posts);
+            });
+    }
+
+    return (
+        <React.Fragment>
+            {isUserAuthenticated ? (
+                <PostCreation
+                    onCreate={() => {
+                        updatePosts();
+                    }}
+                />
+            ) : null}
+            <PostList posts={posts} />
+        </React.Fragment>
+    );
 }
 
 function getCookie(name) {

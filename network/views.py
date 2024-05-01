@@ -14,25 +14,35 @@ def index(request):
 
 def posts(request):
 
-    # Create a new post must be via POST
-    if request.method != "POST":
-        return JsonResponse({"error": "POST request required."}, status=400)
+    # Return content of posts
+    if request.method == "GET":
+        posts = Post.objects.order_by("-timestamp").all()
+        return JsonResponse([post.serialize() for post in posts], safe=False)
+
+    # Create a new post
+    elif request.method == "POST":
+        
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authorization required."}, status=401)
+
+        # Get contents of post
+        data = json.loads(request.body)
+        body = data.get("body", "")
+
+        # Create a post
+        post= Post(
+            author=request.user,
+            body=body
+        )
+        post.save()
+
+        return JsonResponse({"message": "Post created successfully."}, status=201)
     
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Authorization required."}, status=401)
-
-    # Get contents of post
-    data = json.loads(request.body)
-    body = data.get("body", "")
-
-    # Create a post
-    post= Post(
-        author=request.user,
-        body=body
-    )
-    post.save()
-
-    return JsonResponse({"message": "Post created successfully."}, status=201)
+    # Post must be via GET or POST
+    else:
+        return JsonResponse({
+            "error": "GET or POST request required."
+        }, status=400)
 
 
 def login_view(request):
