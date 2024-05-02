@@ -94,33 +94,121 @@ function Post({ postData, onClickAuthor }) {
     );
 }
 
+function PaginationButton({
+    isDisabled = false,
+    isActive = false,
+    children = '',
+    onClick = () => {},
+}) {
+    return (
+        <li
+            className={
+                'page-item' +
+                (isDisabled ? ' disabled' : '') +
+                (isActive ? ' active' : '')
+            }
+        >
+            <button
+                disabled={isDisabled}
+                className="page-link"
+                onClick={() => onClick()}
+            >
+                {children}
+            </button>
+        </li>
+    );
+}
+
+function PostPagination({
+    hasPrefious = false,
+    hasNext = false,
+    currentPage = -1,
+    divider = null,
+    pageRange = [],
+    loadPage = () => {},
+}) {
+    return (
+        <nav>
+            <ul className="pagination justify-content-center">
+                <PaginationButton
+                    isDisabled={!hasPrefious}
+                    onClick={() => loadPage(currentPage - 1)}
+                >
+                    Previous
+                </PaginationButton>
+                {pageRange.map((value, index) => (
+                    <PaginationButton
+                        key={index}
+                        isDisabled={value === divider ? true : false}
+                        isActive={value === currentPage ? true : false}
+                        onClick={() => loadPage(value)}
+                    >
+                        {value}
+                    </PaginationButton>
+                ))}
+                <PaginationButton
+                    isDisabled={!hasNext}
+                    onClick={() => loadPage(currentPage + 1)}
+                >
+                    Next
+                </PaginationButton>
+            </ul>
+        </nav>
+    );
+}
+
 function PostList({ config, onClickAuthor }) {
     const [posts, setPosts] = React.useState([]);
+    const [paginator, setPaginator] = React.useState({});
 
-    React.useEffect(() => updatePosts(), [config]);
+    React.useEffect(() => loadPosts(1, 10), [config]);
 
-    function updatePosts() {
-        fetch(config.postApiUrl)
+    function handleLoadPage(pageNumber) {
+        loadPosts(pageNumber, 10, paginator.startswith);
+    }
+
+    function loadPosts(pageNumber, perPage, startswith) {
+        const data = [];
+        if (pageNumber) data.push(`page=${pageNumber}`);
+        if (perPage) data.push(`per_page=${perPage}`);
+        if (startswith) data.push(`startswith=${startswith}`);
+
+        const url =
+            config.postApiUrl + (data.length ? '?' + data.join('&') : '');
+
+        fetch(url)
             .then((response) => response.json())
-            .then((posts) => {
+            .then((response) => {
                 // Print posts
-                console.log(posts);
-                setPosts(posts);
+                console.log(response);
+                setPosts(response.data);
+                setPaginator(response.page);
+                window.scrollTo(0, 0);
             });
     }
 
     return (
         <React.Fragment>
-            {posts.length ? (
-                posts.map((postData) => (
-                    <Post
-                        key={postData.id}
-                        postData={postData}
-                        onClickAuthor={onClickAuthor}
+            {posts.length !== 0 ? (
+                <React.Fragment>
+                    {posts.map((postData) => (
+                        <Post
+                            key={postData.id}
+                            postData={postData}
+                            onClickAuthor={onClickAuthor}
+                        />
+                    ))}
+                    <PostPagination
+                        hasPrefious={paginator.has_previous}
+                        hasNext={paginator.has_next}
+                        currentPage={paginator.current}
+                        divider={paginator.divider}
+                        pageRange={paginator.page_range}
+                        loadPage={handleLoadPage}
                     />
-                ))
+                </React.Fragment>
             ) : (
-                <div className="card">
+                <div className="card mb-3">
                     <div className="card-body">
                         <p className="card-text">No posts</p>
                     </div>
@@ -165,7 +253,7 @@ function UserProfile({ config }) {
     }
 
     function updateUserProfile() {
-        fetch(`/users/${config.page.userId}`)
+        fetch(`/users/${config.page.user_id}`)
             .then((response) => response.json())
             .then((userData) => {
                 // Print user
@@ -249,7 +337,7 @@ function App({ initConfig }) {
             page: {
                 name: 'user_profile',
                 postApiUrl: `/users/${id}/posts`,
-                userId: id,
+                user_id: id,
             },
         });
     }
@@ -324,7 +412,7 @@ switch (app.dataset.pageName) {
         config.page = {
             name: app.dataset.pageName,
             postApiUrl: `/users/${userId}/posts`,
-            userId: userId,
+            user_id: userId,
         };
         break;
 

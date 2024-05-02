@@ -1,6 +1,7 @@
 import json
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
+from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -27,12 +28,57 @@ def subscriptions(request):
     })
 
 
+def serialize_page_object(page_object):
+    return {
+        "current": page_object.number,
+        "has_next": page_object.has_next(),
+        "has_previous": page_object.has_previous(),
+        "divider": page_object.paginator.ELLIPSIS,
+        "page_range": list(
+            page_object.paginator.get_elided_page_range(
+                page_object.number, on_each_side=1, on_ends=0
+            )
+        )
+    }
+
+
+def create_posts_payload(posts, page_number, per_page, startswith):
+
+    # Create pagination
+    paginator = Paginator(posts, per_page)
+    page_object = paginator.get_page(page_number)
+
+    # Serialize posts
+    posts = [post.serialize() for post in page_object.object_list]
+
+    # Serialize pagination
+    page = serialize_page_object(page_object)
+    page["startswith"] = startswith
+
+    return {
+        "page": page,
+        "data": posts
+    }
+
+
 def posts(request):
 
     # Return content of posts
     if request.method == "GET":
-        posts = Post.objects.order_by("-timestamp").all()
-        return JsonResponse([post.serialize() for post in posts], safe=False)
+        page_number = int(request.GET.get("page", 1))
+        per_page = int(request.GET.get("per_page", 10))
+
+        startswith = int(
+            request.GET.get(
+                "startswith",
+                Post.objects.latest("id").id
+            )
+        )
+
+        posts = Post.objects.filter(pk__lte=startswith).order_by("-timestamp")
+        payload = create_posts_payload(posts, page_number, per_page, startswith)
+
+        return JsonResponse(payload)
 
     # Create a new post
     elif request.method == "POST":
@@ -67,11 +113,24 @@ def subscription_posts(request):
 
         if not request.user.is_authenticated:
             return JsonResponse({"error": "Authorization required."}, status=401)
+        
+        page_number = int(request.GET.get("page", 1))
+        per_page = int(request.GET.get("per_page", 10))
+
+        startswith = int(
+            request.GET.get(
+                "startswith",
+                Post.objects.latest("id").id
+            )
+        )
 
         posts = Post.objects.filter(author__readers=request.user)
-        posts = posts.order_by("-timestamp").all()
+        posts = posts.filter(pk__lte=startswith)
+        posts = posts.order_by("-timestamp")
 
-        return JsonResponse([post.serialize() for post in posts], safe=False)
+        payload = create_posts_payload(posts, page_number, per_page, startswith)
+
+        return JsonResponse(payload)
     
     # Subscriptions must be via GET
     else:
@@ -156,10 +215,22 @@ def posts_of_user(request, user_id):
                 "error": f"User with id {user_id} does not exist."
             }, status=400)
         
-        posts = Post.objects.filter(author=user)
-        posts = posts.order_by("-timestamp").all()
+        page_number = int(request.GET.get("page", 1))
+        per_page = int(request.GET.get("per_page", 10))
 
-        return JsonResponse([post.serialize() for post in posts], safe=False)
+        startswith = int(
+            request.GET.get(
+                "startswith",
+                Post.objects.latest("id").id
+            )
+        )
+
+        posts = Post.objects.filter(author=user)
+        posts = posts.filter(pk__lte=startswith).order_by("-timestamp")
+
+        payload = create_posts_payload(posts, page_number, per_page, startswith)
+
+        return JsonResponse(payload)
 
     # User's posts must be via GET
     else:
