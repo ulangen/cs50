@@ -41,7 +41,7 @@ function PostCreation({ onCreate }) {
                     <div className="form-group">
                         <textarea
                             ref={textareaRef}
-                            className="form-control textarea-no-resize"
+                            className="form-control bg-light textarea-no-resize"
                             name="body"
                             rows={5}
                             placeholder="What's happening?"
@@ -153,17 +153,16 @@ function Post({
                         <ul className="card-text list-inline">
                             <li className="list-inline-item">
                                 <button
-                                    className="btn btn-outline-primary"
+                                    className="btn btn-link"
                                     onClick={handleLike}
                                 >
                                     {postData.is_liked ? (
                                         <React.Fragment>
-                                            <i class="bi bi-heart-fill text-danger"></i>{' '}
-                                            Unlike
+                                            <i class="bi bi-heart-fill text-danger"></i>
                                         </React.Fragment>
                                     ) : (
                                         <React.Fragment>
-                                            <i class="bi bi-heart"></i> Like
+                                            <i class="bi bi-heart"></i>
                                         </React.Fragment>
                                     )}
                                 </button>
@@ -172,7 +171,7 @@ function Post({
                                 <React.Fragment>
                                     <li className="list-inline-item">
                                         <button
-                                            className="btn btn-outline-primary"
+                                            className="btn btn-link"
                                             onClick={() =>
                                                 onToggleEditing(
                                                     postData.id,
@@ -186,7 +185,7 @@ function Post({
                                     <li className="list-inline-item">
                                         {isEdited && (
                                             <button
-                                                className="btn btn-outline-primary"
+                                                className="btn btn-link"
                                                 onClick={handleSavePost}
                                             >
                                                 Save
