@@ -239,6 +239,37 @@ def posts_of_user(request, user_id):
         }, status=400)
 
 
+def post(request, post_id):
+
+    # Update post contents
+    if request.method == "PUT":
+
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authorization required."}, status=401)
+
+        # Query for requested post
+        try:
+            post = Post.objects.get(pk=post_id)
+        except Post.DoesNotExist:
+            return JsonResponse({"error": "Post not found."}, status=404)
+
+        data = json.loads(request.body)
+        if data.get("body") is not None:
+
+            if post.author != request.user:
+                 return JsonResponse({"error": "User cannot edit other people's posts."}, status=403)
+
+            post.body = data["body"]
+        post.save()
+        return HttpResponse(status=204)
+
+    # Post must be via PUT
+    else:
+        return JsonResponse({
+            "error": "PUT request required."
+        }, status=400)
+
+
 def login_view(request):
     if request.method == "POST":
 

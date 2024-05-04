@@ -13,6 +13,7 @@ urlpatterns = [
 
     # API Routes
     path("posts", views.posts, name="posts"),
+    path("posts/<int:post_id>", views.post, name="post"),
     path("posts/subscriptions", views.subscription_posts, name="subscription_posts"),
     path("users/<int:user_id>", views.users, name="users"),
     path("users/<int:user_id>/posts", views.posts_of_user, name="posts_of_users")

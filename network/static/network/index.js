@@ -60,10 +60,54 @@ function PostCreation({ onCreate }) {
     );
 }
 
-function Post({ postData, onClickAuthor }) {
+function Post({
+    userData,
+    postData,
+    onClickAuthor,
+    onUpdatePost = () => {},
+}) {
+    const [isEdited, setIsEdited] = React.useState(false);
+    const textareaRef = React.useRef(null);
+
     function handleClickAuthor(event) {
         event.preventDefault();
         onClickAuthor(postData.author_id);
+    }
+
+    function handleSavePost() {
+        const textarea = textareaRef.current;
+
+        fetch(`/posts/${postData.id}`, {
+            method: 'put',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                body: textarea.value,
+            }),
+        }).then(() => {
+            onUpdatePost();
+            setIsEdited(!isEdited);
+        });
+    }
+
+    let postBody = null;
+
+    if (isEdited) {
+        postBody = (
+            <div className="form-group">
+                <textarea
+                    autoFocus={true}
+                    ref={textareaRef}
+                    className="form-control textarea-no-resize"
+                    defaultValue={postData.body}
+                    name="body"
+                    rows={5}
+                />
+            </div>
+        );
+    } else {
+        postBody = <p className="card-text">{postData.body}</p>;
     }
 
     return (
@@ -78,7 +122,7 @@ function Post({ postData, onClickAuthor }) {
                         {postData.author}
                     </a>
                 </h5>
-                <p className="card-text">{postData.body}</p>
+                {postBody}
                 <p className="card-text">
                     <small className="text-muted">{postData.timestamp}</small>
                 </p>
@@ -89,6 +133,32 @@ function Post({ postData, onClickAuthor }) {
                         <span className="text-muted">Likes</span>
                     </li>
                 </ul>
+                {userData.isAuthenticated &&
+                    userData.id === postData.author_id && (
+                        <React.Fragment>
+                            <hr />
+                            <ul className="card-text list-inline">
+                                <li className="list-inline-item">
+                                    <button
+                                        className="btn btn-outline-primary"
+                                        onClick={() => setIsEdited(!isEdited)}
+                                    >
+                                        {isEdited ? 'Cancel' : 'Edit'}
+                                    </button>
+                                </li>
+                                <li className="list-inline-item">
+                                    {isEdited && (
+                                        <button
+                                            className="btn btn-outline-primary"
+                                            onClick={handleSavePost}
+                                        >
+                                            Save
+                                        </button>
+                                    )}
+                                </li>
+                            </ul>
+                        </React.Fragment>
+                    )}
             </div>
         </div>
     );
@@ -157,7 +227,7 @@ function PostPagination({
     );
 }
 
-function PostList({ config, onClickAuthor }) {
+function PostList({ userData, config, onClickAuthor }) {
     const [posts, setPosts] = React.useState([]);
     const [paginator, setPaginator] = React.useState({});
 
@@ -165,6 +235,7 @@ function PostList({ config, onClickAuthor }) {
 
     function handleLoadPage(pageNumber) {
         loadPosts(pageNumber, 10, paginator.startswith);
+        window.scrollTo(0, 0);
     }
 
     function loadPosts(pageNumber, perPage, startswith) {
@@ -183,7 +254,6 @@ function PostList({ config, onClickAuthor }) {
                 console.log(response);
                 setPosts(response.data);
                 setPaginator(response.page);
-                window.scrollTo(0, 0);
             });
     }
 
@@ -193,9 +263,17 @@ function PostList({ config, onClickAuthor }) {
                 <React.Fragment>
                     {posts.map((postData) => (
                         <Post
+                            userData={userData}
                             key={postData.id}
                             postData={postData}
                             onClickAuthor={onClickAuthor}
+                            onUpdatePost={() =>
+                                loadPosts(
+                                    paginator.current,
+                                    10,
+                                    paginator.startswith
+                                )
+                            }
                         />
                     ))}
                     <PostPagination
@@ -221,6 +299,7 @@ function PostList({ config, onClickAuthor }) {
 function AllPostsPage({ config, onClickAuthor }) {
     const [postListConfig, setPostListConfig] = React.useState({
         postApiUrl: config.page.postApiUrl,
+        userId: config.user.id,
     });
 
     return (
@@ -230,7 +309,11 @@ function AllPostsPage({ config, onClickAuthor }) {
                     onCreate={() => setPostListConfig({ ...postListConfig })}
                 />
             ) : null}
-            <PostList config={postListConfig} onClickAuthor={onClickAuthor} />
+            <PostList
+                userData={config.user}
+                config={postListConfig}
+                onClickAuthor={onClickAuthor}
+            />
         </React.Fragment>
     );
 }
@@ -290,7 +373,7 @@ function UserProfile({ config }) {
         <div className="card mb-3">
             <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">{userData.username}</h3>
+                    <h3 class="card-title mb-0">{userData.username}</h3>
                     {followButton}
                 </div>
                 <hr />
@@ -317,7 +400,11 @@ function UserProfilePage({ config }) {
     return (
         <React.Fragment>
             <UserProfile config={config} />
-            <PostList config={postListConfig} onClickAuthor={() => {}} />
+            <PostList
+                userData={config.user}
+                config={postListConfig}
+                onClickAuthor={() => {}}
+            />
         </React.Fragment>
     );
 }
@@ -325,7 +412,13 @@ function UserProfilePage({ config }) {
 function SubscriptionPostsPage({ config, onClickAuthor }) {
     const postListConfig = { ...config.page };
 
-    return <PostList config={postListConfig} onClickAuthor={onClickAuthor} />;
+    return (
+        <PostList
+            userData={config.user}
+            config={postListConfig}
+            onClickAuthor={onClickAuthor}
+        />
+    );
 }
 
 function App({ initConfig }) {
@@ -392,10 +485,13 @@ function getCookie(name) {
 
 const app = document.querySelector('#app');
 
+const userId = app.dataset.userId;
+
 const config = {
     user: {
         isAuthenticated:
             app.dataset.isUserAuthenticated === 'True' ? true : false,
+        id: userId === 'None' ? -1 : Number(userId),
     },
 };
 

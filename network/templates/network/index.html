@@ -8,12 +8,14 @@
         <div
             id="app"
             data-is-user-authenticated="{{ user.is_authenticated }}"
+            data-user-id="{{ user.id }}"
             data-page-name="{{ page_name }}"
         ></div>
     {% elif page_name == "user_profile" %}
         <div
             id="app"
             data-is-user-authenticated="{{ user.is_authenticated }}"
+            data-user-id="{{ user.id }}"
             data-page-name="{{ page_name }}"
             data-page-user-id="{{ page_user_id }}"
         ></div>
@@ -21,6 +23,7 @@
         <div
             id="app"
             data-is-user-authenticated="{{ user.is_authenticated }}"
+            data-user-id="{{ user.id }}"
             data-page-name="{{ page_name }}"
         ></div>
     {% endif %}
