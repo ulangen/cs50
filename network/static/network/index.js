@@ -63,10 +63,11 @@ function PostCreation({ onCreate }) {
 function Post({
     userData,
     postData,
+    isEdited = false,
     onClickAuthor,
+    onToggleEditing = () => {},
     onUpdatePost = () => {},
 }) {
-    const [isEdited, setIsEdited] = React.useState(false);
     const textareaRef = React.useRef(null);
 
     function handleClickAuthor(event) {
@@ -87,7 +88,20 @@ function Post({
             }),
         }).then(() => {
             onUpdatePost();
-            setIsEdited(!isEdited);
+        });
+    }
+
+    function handleLike() {
+        fetch(`/posts/${postData.id}`, {
+            method: 'put',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                liked: !postData.is_liked,
+            }),
+        }).then(() => {
+            onUpdatePost();
         });
     }
 
@@ -99,7 +113,7 @@ function Post({
                 <textarea
                     autoFocus={true}
                     ref={textareaRef}
-                    className="form-control textarea-no-resize"
+                    className="form-control bg-light textarea-no-resize"
                     defaultValue={postData.body}
                     name="body"
                     rows={5}
@@ -129,36 +143,61 @@ function Post({
                 <hr />
                 <ul className="card-text list-inline">
                     <li className="list-inline-item">
-                        <strong>0</strong>{' '}
+                        <strong>{postData.number_of_likes}</strong>{' '}
                         <span className="text-muted">Likes</span>
                     </li>
                 </ul>
-                {userData.isAuthenticated &&
-                    userData.id === postData.author_id && (
-                        <React.Fragment>
-                            <hr />
-                            <ul className="card-text list-inline">
-                                <li className="list-inline-item">
-                                    <button
-                                        className="btn btn-outline-primary"
-                                        onClick={() => setIsEdited(!isEdited)}
-                                    >
-                                        {isEdited ? 'Cancel' : 'Edit'}
-                                    </button>
-                                </li>
-                                <li className="list-inline-item">
-                                    {isEdited && (
+                {userData.isAuthenticated && (
+                    <React.Fragment>
+                        <hr />
+                        <ul className="card-text list-inline">
+                            <li className="list-inline-item">
+                                <button
+                                    className="btn btn-outline-primary"
+                                    onClick={handleLike}
+                                >
+                                    {postData.is_liked ? (
+                                        <React.Fragment>
+                                            <i class="bi bi-heart-fill text-danger"></i>{' '}
+                                            Unlike
+                                        </React.Fragment>
+                                    ) : (
+                                        <React.Fragment>
+                                            <i class="bi bi-heart"></i> Like
+                                        </React.Fragment>
+                                    )}
+                                </button>
+                            </li>
+                            {userData.id === postData.author_id && (
+                                <React.Fragment>
+                                    <li className="list-inline-item">
                                         <button
                                             className="btn btn-outline-primary"
-                                            onClick={handleSavePost}
+                                            onClick={() =>
+                                                onToggleEditing(
+                                                    postData.id,
+                                                    !isEdited
+                                                )
+                                            }
                                         >
-                                            Save
+                                            {isEdited ? 'Cancel' : 'Edit'}
                                         </button>
-                                    )}
-                                </li>
-                            </ul>
-                        </React.Fragment>
-                    )}
+                                    </li>
+                                    <li className="list-inline-item">
+                                        {isEdited && (
+                                            <button
+                                                className="btn btn-outline-primary"
+                                                onClick={handleSavePost}
+                                            >
+                                                Save
+                                            </button>
+                                        )}
+                                    </li>
+                                </React.Fragment>
+                            )}
+                        </ul>
+                    </React.Fragment>
+                )}
             </div>
         </div>
     );
@@ -238,6 +277,15 @@ function PostList({ userData, config, onClickAuthor }) {
         window.scrollTo(0, 0);
     }
 
+    function handleTogglePostEditing(editedPostId, isEdited) {
+        setPosts(
+            posts.map((post) => ({
+                ...post,
+                isEdited: isEdited && post.id === editedPostId ? true : false,
+            }))
+        );
+    }
+
     function loadPosts(pageNumber, perPage, startswith) {
         const data = [];
         if (pageNumber) data.push(`page=${pageNumber}`);
@@ -264,9 +312,11 @@ function PostList({ userData, config, onClickAuthor }) {
                     {posts.map((postData) => (
                         <Post
                             userData={userData}
+                            isEdited={postData.isEdited}
                             key={postData.id}
                             postData={postData}
                             onClickAuthor={onClickAuthor}
+                            onToggleEditing={handleTogglePostEditing}
                             onUpdatePost={() =>
                                 loadPosts(
                                     paginator.current,

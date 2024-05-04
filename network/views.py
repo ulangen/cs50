@@ -1,6 +1,8 @@
 import json
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Exists, OuterRef, Count
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -21,7 +23,7 @@ def user_profile(request, user_id):
         "page_user_id": user_id
     })
 
-
+@login_required
 def subscriptions(request):
     return render(request, "network/index.html", {
         "page_name": "subscriptions"
@@ -42,14 +44,38 @@ def serialize_page_object(page_object):
     }
 
 
-def create_posts_payload(posts, page_number, per_page, startswith):
+def create_posts_payload(user, posts, page_number, per_page, startswith):
 
     # Create pagination
     paginator = Paginator(posts, per_page)
     page_object = paginator.get_page(page_number)
 
+    # Count the number of likes on a post
+    posts =  page_object.object_list
+    posts = posts.annotate(
+        number_of_likes=Count("liked_by")
+    )
+
     # Serialize posts
-    posts = [post.serialize() for post in page_object.object_list]
+    serialized_posts = []
+    if user.is_authenticated:
+        # Find out if the user liked post
+        posts = posts.annotate(
+            is_liked=Exists(
+                user.liked_posts.filter(id=OuterRef('pk'))
+            )
+        )
+        
+        for post in posts:
+            serialized_post = post.serialize()
+            serialized_post["is_liked"] = post.is_liked
+            serialized_post["number_of_likes"] = post.number_of_likes
+            serialized_posts.append(serialized_post)
+    else:
+        for post in posts:
+            serialized_post = post.serialize()
+            serialized_post["number_of_likes"] = post.number_of_likes
+            serialized_posts.append(serialized_post)
 
     # Serialize pagination
     page = serialize_page_object(page_object)
@@ -57,7 +83,7 @@ def create_posts_payload(posts, page_number, per_page, startswith):
 
     return {
         "page": page,
-        "data": posts
+        "data": serialized_posts
     }
 
 
@@ -76,7 +102,7 @@ def posts(request):
         )
 
         posts = Post.objects.filter(pk__lte=startswith).order_by("-timestamp")
-        payload = create_posts_payload(posts, page_number, per_page, startswith)
+        payload = create_posts_payload(request.user, posts, page_number, per_page, startswith)
 
         return JsonResponse(payload)
 
@@ -128,7 +154,7 @@ def subscription_posts(request):
         posts = posts.filter(pk__lte=startswith)
         posts = posts.order_by("-timestamp")
 
-        payload = create_posts_payload(posts, page_number, per_page, startswith)
+        payload = create_posts_payload(request.user, posts, page_number, per_page, startswith)
 
         return JsonResponse(payload)
     
@@ -228,7 +254,7 @@ def posts_of_user(request, user_id):
         posts = Post.objects.filter(author=user)
         posts = posts.filter(pk__lte=startswith).order_by("-timestamp")
 
-        payload = create_posts_payload(posts, page_number, per_page, startswith)
+        payload = create_posts_payload(request.user, posts, page_number, per_page, startswith)
 
         return JsonResponse(payload)
 
@@ -260,6 +286,13 @@ def post(request, post_id):
                  return JsonResponse({"error": "User cannot edit other people's posts."}, status=403)
 
             post.body = data["body"]
+
+        if data.get("liked") is not None:
+            if data["liked"]:
+                post.liked_by.add(request.user)
+            else:
+                post.liked_by.remove(request.user)
+
         post.save()
         return HttpResponse(status=204)
 
