@@ -121,7 +121,7 @@ function Post({
             </div>
         );
     } else {
-        postBody = <p className="card-text">{postData.body}</p>;
+        postBody = <p className="card-text post-body-text">{postData.body}</p>;
     }
 
     return (

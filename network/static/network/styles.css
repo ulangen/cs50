@@ -5,3 +5,7 @@
 .page-width {
     max-width: 768px;
 }
+
+.post-body-text {
+    white-space: pre-wrap;
+}
